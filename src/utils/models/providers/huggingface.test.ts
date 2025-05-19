@@ -44,8 +44,8 @@ describe('huggingface provider', () => {
     
     await fetchHuggingFaceModels(mockApiKey, customBaseUrl);
     
-    const lastCall = mockFetch.lastCall();
-    expect(lastCall.url).toContain(customBaseUrl);
+    const lastReq = mockFetch.requests()[mockFetch.requests().length - 1];
+    expect(lastReq.url).toContain(customBaseUrl);
   });
   
   it('should send correct authorization header', async () => {
@@ -58,8 +58,8 @@ describe('huggingface provider', () => {
     
     await fetchHuggingFaceModels(mockApiKey);
     
-    const lastCall = mockFetch.lastCall();
-    expect(lastCall.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
+    const lastReq = mockFetch.requests()[mockFetch.requests().length - 1];
+    expect(lastReq.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
   });
   
   it('should throw error on failed request', async () => {

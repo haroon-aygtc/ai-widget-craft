@@ -65,9 +65,9 @@ describe('openrouter provider', () => {
     
     await fetchOpenRouterModels(mockApiKey);
     
-    const lastCall = mockFetch.lastCall();
-    expect(lastCall.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
-    expect(lastCall.headers.get('Content-Type')).toBe('application/json');
+    const lastReq = mockFetch.requests()[mockFetch.requests().length - 1];
+    expect(lastReq.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
+    expect(lastReq.headers.get('Content-Type')).toBe('application/json');
   });
   
   it('should throw error on failed request', async () => {
