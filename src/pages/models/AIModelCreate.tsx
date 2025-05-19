@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 // Form schema
 const formSchema = z.object({
@@ -27,9 +28,19 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// API interface for model information
+interface ModelInfo {
+  id: string;
+  name: string;
+  type?: string;
+}
+
 const AIModelCreate = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [selectedModelDetails, setSelectedModelDetails] = useState<ModelInfo | null>(null);
 
   const providers = [
     { id: "openai", name: "OpenAI" },
@@ -57,8 +68,119 @@ const AIModelCreate = () => {
     defaultValues,
   });
 
-  // Watch fields for conditional rendering
+  // Watch fields for conditional rendering and API calls
   const selectedProvider = form.watch("provider");
+  const apiKey = form.watch("apiKey");
+  const selectedModelId = form.watch("modelId");
+
+  // Fetch models when provider and API key are available
+  useEffect(() => {
+    if (selectedProvider && apiKey && apiKey.length > 5) {
+      fetchModelsForProvider();
+    } else {
+      setAvailableModels([]);
+    }
+  }, [selectedProvider, apiKey]);
+
+  // Update model details when a model is selected
+  useEffect(() => {
+    if (selectedModelId && availableModels.length > 0) {
+      const modelDetails = availableModels.find(model => model.id === selectedModelId);
+      if (modelDetails) {
+        setSelectedModelDetails(modelDetails);
+        
+        // Update the name field if it's empty or was auto-generated
+        if (!form.getValues("name") || form.getValues("name").startsWith(`${selectedProvider}-`)) {
+          form.setValue("name", modelDetails.name);
+        }
+        
+        // Update type if available from API
+        if (modelDetails.type) {
+          form.setValue("type", modelDetails.type as "text" | "image" | "multi-modal");
+        }
+      }
+    }
+  }, [selectedModelId, availableModels]);
+
+  const fetchModelsForProvider = async () => {
+    // Skip fetching for custom provider
+    if (selectedProvider === "custom") {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // In a real implementation, this would be a call to the respective provider's API
+      // For demo purposes, we're simulating API responses
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      
+      let models: ModelInfo[] = [];
+      
+      switch (selectedProvider) {
+        case "openai":
+          models = [
+            { id: "gpt-4o", name: "GPT-4o" },
+            { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+            { id: "gpt-4-turbo", name: "GPT-4 Turbo" },
+            { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
+            { id: "dall-e-3", name: "DALL-E 3", type: "image" },
+            { id: "tts-1", name: "TTS-1", type: "text" },
+          ];
+          break;
+        case "google":
+          models = [
+            { id: "gemini-pro", name: "Gemini Pro" },
+            { id: "gemini-pro-vision", name: "Gemini Pro Vision", type: "multi-modal" },
+            { id: "gemini-ultra", name: "Gemini Ultra" },
+          ];
+          break;
+        case "anthropic":
+          models = [
+            { id: "claude-3-opus", name: "Claude 3 Opus" },
+            { id: "claude-3-sonnet", name: "Claude 3 Sonnet" },
+            { id: "claude-3-haiku", name: "Claude 3 Haiku" },
+            { id: "claude-instant", name: "Claude Instant" },
+          ];
+          break;
+        case "huggingface":
+          models = [
+            { id: "mistral-7b", name: "Mistral 7B" },
+            { id: "llama-3-70b", name: "Llama 3 70B" },
+            { id: "falcon-180b", name: "Falcon 180B" },
+          ];
+          break;
+        case "openrouter":
+          models = [
+            { id: "openrouter/auto", name: "OpenRouter Auto" },
+            { id: "openrouter/openai/gpt-4", name: "OpenRouter GPT-4" },
+            { id: "openrouter/anthropic/claude-3", name: "OpenRouter Claude 3" },
+          ];
+          break;
+        default:
+          models = [];
+      }
+      
+      setAvailableModels(models);
+
+      // Show success toast if models were found
+      if (models.length > 0) {
+        toast({
+          title: "Models fetched successfully",
+          description: `Found ${models.length} models for ${providers.find(p => p.id === selectedProvider)?.name}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching models:", error);
+      toast({
+        title: "Error fetching models",
+        description: "Could not fetch models for the selected provider. Please check your API key.",
+        variant: "destructive",
+      });
+      setAvailableModels([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSubmit = (data: FormValues) => {
     console.log("Form submitted:", data);
@@ -67,44 +189,6 @@ const AIModelCreate = () => {
       description: `${data.name} has been added successfully.`,
     });
     navigate("/models");
-  };
-
-  // Get provider-specific model options
-  const getModelOptions = (provider: string) => {
-    switch (provider) {
-      case "openai":
-        return [
-          { id: "gpt-4", name: "GPT-4" },
-          { id: "gpt-4-turbo", name: "GPT-4 Turbo" },
-          { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
-        ];
-      case "google":
-        return [
-          { id: "gemini-pro", name: "Gemini Pro" },
-          { id: "gemini-pro-vision", name: "Gemini Pro Vision" },
-        ];
-      case "anthropic":
-        return [
-          { id: "claude-3-opus", name: "Claude 3 Opus" },
-          { id: "claude-3-sonnet", name: "Claude 3 Sonnet" },
-          { id: "claude-3-haiku", name: "Claude 3 Haiku" },
-          { id: "claude-instant", name: "Claude Instant" },
-        ];
-      case "huggingface":
-        return [
-          { id: "mistral-7b", name: "Mistral 7B" },
-          { id: "llama-3-70b", name: "Llama 3 70B" },
-          { id: "falcon-180b", name: "Falcon 180B" },
-        ];
-      case "openrouter":
-        return [
-          { id: "openrouter/auto", name: "OpenRouter Auto" },
-          { id: "openrouter/openai/gpt-4", name: "OpenRouter GPT-4" },
-          { id: "openrouter/anthropic/claude-3", name: "OpenRouter Claude 3" },
-        ];
-      default:
-        return [];
-    }
   };
 
   return (
@@ -127,23 +211,6 @@ const AIModelCreate = () => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. My GPT-4 Model" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        A friendly name to identify this model in the dashboard.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -175,32 +242,19 @@ const AIModelCreate = () => {
 
                   <FormField
                     control={form.control}
-                    name="modelId"
+                    name="apiKey"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Model ID</FormLabel>
-                        {selectedProvider && selectedProvider !== "custom" ? (
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a model" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {getModelOptions(selectedProvider).map((model) => (
-                                <SelectItem key={model.id} value={model.id}>
-                                  {model.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <FormControl>
-                            <Input placeholder="e.g. gpt-4, gemini-pro" {...field} />
-                          </FormControl>
-                        )}
+                        <FormLabel>API Key</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password" 
+                            placeholder="Enter your API key" 
+                            {...field} 
+                          />
+                        </FormControl>
                         <FormDescription>
-                          The specific model identifier from the provider.
+                          Your API key will be encrypted and stored securely.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -208,21 +262,79 @@ const AIModelCreate = () => {
                   />
                 </div>
 
+                {selectedProvider && apiKey && apiKey.length > 5 && (
+                  <FormField
+                    control={form.control}
+                    name="modelId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Model</FormLabel>
+                        <div className="space-y-2">
+                          {loading && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Fetching available models...</span>
+                            </div>
+                          )}
+                          
+                          {!loading && availableModels.length > 0 && selectedProvider !== "custom" && (
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a model" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {availableModels.map((model) => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    {model.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          
+                          {!loading && (availableModels.length === 0 || selectedProvider === "custom") && (
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g. gpt-4, gemini-pro" 
+                                {...field} 
+                              />
+                            </FormControl>
+                          )}
+                        </div>
+                        <FormDescription>
+                          {selectedProvider === "custom" 
+                            ? "Enter the specific model identifier from the provider."
+                            : "Select from available models provided by the API."}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <FormField
                   control={form.control}
-                  name="apiKey"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>API Key</FormLabel>
+                      <FormLabel>Model Name</FormLabel>
                       <FormControl>
                         <Input 
-                          type="password" 
-                          placeholder="Enter your API key" 
-                          {...field} 
+                          placeholder="e.g. My GPT-4 Model"
+                          {...field}
+                          readOnly={!!selectedModelDetails}
+                          className={selectedModelDetails ? "bg-gray-50" : ""}
                         />
                       </FormControl>
                       <FormDescription>
-                        Your API key will be encrypted and stored securely.
+                        {selectedModelDetails 
+                          ? "Name auto-filled from selected model."
+                          : "A friendly name to identify this model in the dashboard."}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -258,9 +370,13 @@ const AIModelCreate = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Model Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                          disabled={!!selectedModelDetails?.type}
+                        >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className={selectedModelDetails?.type ? "bg-gray-50" : ""}>
                               <SelectValue placeholder="Select a type" />
                             </SelectTrigger>
                           </FormControl>
@@ -271,7 +387,9 @@ const AIModelCreate = () => {
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          The capabilities of this model.
+                          {selectedModelDetails?.type
+                            ? "Type auto-detected from model capabilities."
+                            : "The capabilities of this model."}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
