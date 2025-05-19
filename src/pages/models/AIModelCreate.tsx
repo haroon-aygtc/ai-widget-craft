@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // Form schema
 const formSchema = z.object({
@@ -33,6 +34,7 @@ interface ModelInfo {
   id: string;
   name: string;
   type?: string;
+  isFree?: boolean;
 }
 
 const AIModelCreate = () => {
@@ -91,10 +93,8 @@ const AIModelCreate = () => {
       if (modelDetails) {
         setSelectedModelDetails(modelDetails);
         
-        // Update the name field if it's empty or was auto-generated
-        if (!form.getValues("name") || form.getValues("name").startsWith(`${selectedProvider}-`)) {
-          form.setValue("name", modelDetails.name);
-        }
+        // Update the name field with selected model's name
+        form.setValue("name", modelDetails.name);
         
         // Update type if available from API
         if (modelDetails.type) {
@@ -136,6 +136,9 @@ const AIModelCreate = () => {
           models = [];
       }
       
+      // Sort models to display free ones at the top
+      models = sortModelsByFreeStatus(models);
+      
       setAvailableModels(models);
 
       // Show success toast if models were found
@@ -159,6 +162,41 @@ const AIModelCreate = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to identify free models and sort them
+  const sortModelsByFreeStatus = (models: ModelInfo[]): ModelInfo[] => {
+    // Tag models as free based on provider and model ID
+    const modelsWithFreeStatus = models.map((model) => {
+      const modelId = model.id.toLowerCase();
+      const isFree = (
+        // OpenAI free models
+        (selectedProvider === "openai" && (
+          modelId.includes("gpt-3.5") || 
+          modelId.includes("babbage") || 
+          modelId.includes("ada")
+        )) || 
+        // Google free models (Gemini)
+        (selectedProvider === "google" && modelId.includes("gemini-1.0")) ||
+        // Hugging Face has many free models
+        (selectedProvider === "huggingface") ||
+        // OpenRouter has some free models
+        (selectedProvider === "openrouter" && model.id.includes("free"))
+      );
+      
+      return {
+        ...model,
+        isFree
+      };
+    });
+    
+    // Sort by free status (free models first)
+    return modelsWithFreeStatus.sort((a, b) => {
+      if (a.isFree === b.isFree) {
+        return a.name.localeCompare(b.name); // If both have same free status, sort alphabetically
+      }
+      return a.isFree ? -1 : 1; // Free models first
+    });
   };
 
   // Real API integration for OpenAI
@@ -476,10 +514,21 @@ const AIModelCreate = () => {
                                   <SelectValue placeholder="Select a model" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent className="max-h-60 overflow-y-auto">
                                 {availableModels.map((model) => (
-                                  <SelectItem key={model.id} value={model.id}>
-                                    {model.name}
+                                  <SelectItem 
+                                    key={model.id} 
+                                    value={model.id}
+                                    className={model.isFree ? "bg-[#F2FCE2]" : ""}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span>{model.name}</span>
+                                      {model.isFree && (
+                                        <Badge variant="outline" className="ml-1 bg-green-50 text-green-700 border-green-200">
+                                          Free
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
