@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -548,7 +547,13 @@ subdomain.example.com"
               </div>
               <CardDescription>See how your widget will appear to users.</CardDescription>
             </CardHeader>
-            <CardContent className={`pt-2 ${previewDevice === "mobile" ? "max-w-[320px]" : previewDevice === "tablet" ? "max-w-[768px]" : ""} mx-auto`}>
+            <CardContent className={`pt-2 ${
+              previewDevice === "mobile" 
+                ? "max-w-[320px]" 
+                : previewDevice === "tablet" 
+                  ? "max-w-[600px]" 
+                  : "max-w-[100%]"
+            } mx-auto`}>
               <WidgetPreviewComponent config={widgetConfig} />
             </CardContent>
           </Card>
