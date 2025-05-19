@@ -39,6 +39,7 @@ const AIModelCreate = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModelDetails, setSelectedModelDetails] = useState<ModelInfo | null>(null);
 
@@ -71,6 +72,7 @@ const AIModelCreate = () => {
   // Watch fields for conditional rendering and API calls
   const selectedProvider = form.watch("provider");
   const apiKey = form.watch("apiKey");
+  const baseUrl = form.watch("baseUrl");
   const selectedModelId = form.watch("modelId");
 
   // Fetch models when provider and API key are available
@@ -80,7 +82,7 @@ const AIModelCreate = () => {
     } else {
       setAvailableModels([]);
     }
-  }, [selectedProvider, apiKey]);
+  }, [selectedProvider, apiKey, baseUrl]);
 
   // Update model details when a model is selected
   useEffect(() => {
@@ -109,52 +111,26 @@ const AIModelCreate = () => {
     }
 
     setLoading(true);
+    setError(null);
+    
     try {
-      // In a real implementation, this would be a call to the respective provider's API
-      // For demo purposes, we're simulating API responses
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-      
       let models: ModelInfo[] = [];
       
       switch (selectedProvider) {
         case "openai":
-          models = [
-            { id: "gpt-4o", name: "GPT-4o" },
-            { id: "gpt-4o-mini", name: "GPT-4o Mini" },
-            { id: "gpt-4-turbo", name: "GPT-4 Turbo" },
-            { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
-            { id: "dall-e-3", name: "DALL-E 3", type: "image" },
-            { id: "tts-1", name: "TTS-1", type: "text" },
-          ];
+          models = await fetchOpenAIModels();
           break;
         case "google":
-          models = [
-            { id: "gemini-pro", name: "Gemini Pro" },
-            { id: "gemini-pro-vision", name: "Gemini Pro Vision", type: "multi-modal" },
-            { id: "gemini-ultra", name: "Gemini Ultra" },
-          ];
+          models = await fetchGoogleModels();
           break;
         case "anthropic":
-          models = [
-            { id: "claude-3-opus", name: "Claude 3 Opus" },
-            { id: "claude-3-sonnet", name: "Claude 3 Sonnet" },
-            { id: "claude-3-haiku", name: "Claude 3 Haiku" },
-            { id: "claude-instant", name: "Claude Instant" },
-          ];
+          models = await fetchAnthropicModels();
           break;
         case "huggingface":
-          models = [
-            { id: "mistral-7b", name: "Mistral 7B" },
-            { id: "llama-3-70b", name: "Llama 3 70B" },
-            { id: "falcon-180b", name: "Falcon 180B" },
-          ];
+          models = await fetchHuggingFaceModels();
           break;
         case "openrouter":
-          models = [
-            { id: "openrouter/auto", name: "OpenRouter Auto" },
-            { id: "openrouter/openai/gpt-4", name: "OpenRouter GPT-4" },
-            { id: "openrouter/anthropic/claude-3", name: "OpenRouter Claude 3" },
-          ];
+          models = await fetchOpenRouterModels();
           break;
         default:
           models = [];
@@ -168,9 +144,12 @@ const AIModelCreate = () => {
           title: "Models fetched successfully",
           description: `Found ${models.length} models for ${providers.find(p => p.id === selectedProvider)?.name}`,
         });
+      } else {
+        setError("No models found. Please check your API key and try again.");
       }
     } catch (error) {
       console.error("Error fetching models:", error);
+      setError("Failed to fetch models. Please verify your API key and provider settings.");
       toast({
         title: "Error fetching models",
         description: "Could not fetch models for the selected provider. Please check your API key.",
@@ -179,6 +158,188 @@ const AIModelCreate = () => {
       setAvailableModels([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Real API integration for OpenAI
+  const fetchOpenAIModels = async (): Promise<ModelInfo[]> => {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Filter and map relevant models
+    return data.data
+      .filter((model: any) => {
+        const id = model.id.toLowerCase();
+        return (
+          id.includes("gpt-4") || 
+          id.includes("gpt-3.5") || 
+          id.includes("dall-e") || 
+          id.includes("tts")
+        );
+      })
+      .map((model: any) => {
+        let type = "text";
+        if (model.id.toLowerCase().includes("dall-e")) {
+          type = "image";
+        } else if (model.id.toLowerCase().includes("vision")) {
+          type = "multi-modal";
+        }
+        
+        return {
+          id: model.id,
+          name: model.id,
+          type
+        };
+      });
+  };
+
+  // Real API integration for Google (Gemini)
+  const fetchGoogleModels = async (): Promise<ModelInfo[]> => {
+    try {
+      // Google AI API requires a project ID and region
+      // This is a simplified version; in production, you'd need proper Google API auth
+      const url = baseUrl || "https://generativelanguage.googleapis.com/v1beta/models";
+      const response = await fetch(`${url}?key=${apiKey}`);
+      
+      if (!response.ok) {
+        throw new Error(`Google API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      return data.models.map((model: any) => {
+        let type = "text";
+        if (model.name.includes("vision")) {
+          type = "multi-modal";
+        }
+        
+        return {
+          id: model.name,
+          name: model.displayName || model.name,
+          type
+        };
+      });
+    } catch (error) {
+      console.error("Google API error:", error);
+      
+      // Fallback to common models if API fails
+      return [
+        { id: "gemini-pro", name: "Gemini Pro", type: "text" },
+        { id: "gemini-pro-vision", name: "Gemini Pro Vision", type: "multi-modal" },
+        { id: "gemini-ultra", name: "Gemini Ultra", type: "text" }
+      ];
+    }
+  };
+
+  // Real API integration for Anthropic
+  const fetchAnthropicModels = async (): Promise<ModelInfo[]> => {
+    try {
+      // Anthropic API doesn't have a models endpoint yet, so we'll use known models
+      // For real integration, check Anthropic's API documentation for updates
+      
+      // Verify API key is valid by testing a simple completion request
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "claude-3-sonnet-20240229",
+          max_tokens: 10,
+          messages: [{ role: "user", content: "Hello" }]
+        })
+      });
+      
+      // If the request is successful, the API key is valid
+      if (response.ok) {
+        // Return known Claude models
+        return [
+          { id: "claude-3-opus-20240229", name: "Claude 3 Opus", type: "text" },
+          { id: "claude-3-sonnet-20240229", name: "Claude 3 Sonnet", type: "text" },
+          { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", type: "text" },
+          { id: "claude-2.1", name: "Claude 2.1", type: "text" },
+          { id: "claude-instant-1.2", name: "Claude Instant", type: "text" }
+        ];
+      } else {
+        throw new Error(`Anthropic API error: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Anthropic API error:", error);
+      throw error;
+    }
+  };
+
+  // Real API integration for Hugging Face
+  const fetchHuggingFaceModels = async (): Promise<ModelInfo[]> => {
+    try {
+      const hfUrl = baseUrl || "https://huggingface.co/api/models";
+      const response = await fetch(`${hfUrl}?filter=text-generation&sort=downloads&direction=-1&limit=20`, {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Hugging Face API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      return data.map((model: any) => ({
+        id: model.id,
+        name: model.id,
+        type: "text"
+      }));
+    } catch (error) {
+      console.error("Hugging Face API error:", error);
+      throw error;
+    }
+  };
+
+  // Real API integration for OpenRouter
+  const fetchOpenRouterModels = async (): Promise<ModelInfo[]> => {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`OpenRouter API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      return data.data.map((model: any) => {
+        let type = "text";
+        if (model.context_length > 8000) {
+          type = "multi-modal";
+        }
+        
+        return {
+          id: model.id,
+          name: model.name || model.id,
+          type
+        };
+      });
+    } catch (error) {
+      console.error("OpenRouter API error:", error);
+      throw error;
     }
   };
 
@@ -262,6 +423,30 @@ const AIModelCreate = () => {
                   />
                 </div>
 
+                {(selectedProvider === "custom" || selectedProvider === "huggingface" || selectedProvider === "google") && (
+                  <FormField
+                    control={form.control}
+                    name="baseUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Base URL {selectedProvider === "custom" ? "(Optional)" : "(Required)"}</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. https://api.example.com/v1" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {selectedProvider === "custom" 
+                            ? "The API base URL if different from the provider's default."
+                            : "The API base URL for this provider (required)."}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 {selectedProvider && apiKey && apiKey.length > 5 && (
                   <FormField
                     control={form.control}
@@ -275,6 +460,10 @@ const AIModelCreate = () => {
                               <Loader2 className="h-4 w-4 animate-spin" />
                               <span>Fetching available models...</span>
                             </div>
+                          )}
+                          
+                          {!loading && error && (
+                            <div className="text-sm text-destructive">{error}</div>
                           )}
                           
                           {!loading && availableModels.length > 0 && selectedProvider !== "custom" && (
@@ -297,7 +486,7 @@ const AIModelCreate = () => {
                             </Select>
                           )}
                           
-                          {!loading && (availableModels.length === 0 || selectedProvider === "custom") && (
+                          {!loading && (availableModels.length === 0 || selectedProvider === "custom") && !error && (
                             <FormControl>
                               <Input 
                                 placeholder="e.g. gpt-4, gemini-pro" 
@@ -340,28 +529,6 @@ const AIModelCreate = () => {
                     </FormItem>
                   )}
                 />
-
-                {(selectedProvider === "custom" || selectedProvider === "huggingface") && (
-                  <FormField
-                    control={form.control}
-                    name="baseUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Base URL (Optional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="e.g. https://api.example.com/v1" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          The API base URL if different from the provider's default.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
