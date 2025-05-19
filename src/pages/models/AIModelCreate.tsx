@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +16,8 @@ import ModelTypeSelect from "@/components/models/ModelTypeSelect";
 import TemperatureInput from "@/components/models/TemperatureInput";
 import MaxTokensInput from "@/components/models/MaxTokensInput";
 import ActiveStatusToggle from "@/components/models/ActiveStatusToggle";
+import AIModelTest from "@/components/models/AIModelTest";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AIModelCreate = () => {
   const { toast } = useToast();
@@ -49,57 +50,70 @@ const AIModelCreate = () => {
         <h1 className="text-3xl font-bold tracking-tight">Add AI Model</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Model Configuration</CardTitle>
-          <CardDescription>
-            Configure your AI model settings and credentials.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ProviderSelect form={form} providers={providers} />
-                  <ApiKeyInput form={form} />
-                </div>
+      <Tabs defaultValue="config">
+        <TabsList className="grid grid-cols-2 w-[400px]">
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="test">Test</TabsTrigger>
+        </TabsList>
 
-                {(selectedProvider === "custom" || selectedProvider === "huggingface" || selectedProvider === "google") && (
-                  <BaseUrlInput form={form} selectedProvider={selectedProvider} />
-                )}
+        <TabsContent value="config">
+          <Card>
+            <CardHeader>
+              <CardTitle>Model Configuration</CardTitle>
+              <CardDescription>
+                Configure your AI model settings and credentials.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <ProviderSelect form={form} providers={providers} />
+                      <ApiKeyInput form={form} />
+                    </div>
 
-                {selectedProvider && form.getValues("apiKey").length > 5 && (
-                  <ModelSelect 
-                    form={form} 
-                    loading={loading} 
-                    error={error} 
-                    availableModels={availableModels}
-                    selectedProvider={selectedProvider}
-                  />
-                )}
+                    {(selectedProvider === "custom" || selectedProvider === "huggingface" || selectedProvider === "google") && (
+                      <BaseUrlInput form={form} selectedProvider={selectedProvider} />
+                    )}
 
-                <ModelNameInput form={form} selectedModelDetails={selectedModelDetails} />
+                    {selectedProvider && form.getValues("apiKey").length > 5 && (
+                      <ModelSelect 
+                        form={form} 
+                        loading={loading} 
+                        error={error} 
+                        availableModels={availableModels}
+                        selectedProvider={selectedProvider}
+                      />
+                    )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ModelTypeSelect form={form} selectedModelDetails={selectedModelDetails} />
-                  <TemperatureInput form={form} />
-                </div>
+                    <ModelNameInput form={form} selectedModelDetails={selectedModelDetails} />
 
-                <MaxTokensInput form={form} />
-                <ActiveStatusToggle form={form} />
-              </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <ModelTypeSelect form={form} selectedModelDetails={selectedModelDetails} />
+                      <TemperatureInput form={form} />
+                    </div>
 
-              <div className="flex justify-end pt-4 border-t">
-                <Button type="button" variant="outline" className="mr-2" onClick={() => navigate("/models")}>
-                  Cancel
-                </Button>
-                <Button type="submit">Add Model</Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                    <MaxTokensInput form={form} />
+                    <ActiveStatusToggle form={form} />
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button type="button" variant="outline" className="mr-2" onClick={() => navigate("/models")}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Add Model</Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="test">
+          <AIModelTest form={form} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
