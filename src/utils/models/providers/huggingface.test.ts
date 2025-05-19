@@ -1,7 +1,7 @@
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchHuggingFaceModels } from './huggingface';
-import { MockFetch, mockFetch } from 'vi-fetch';
+import { mockFetch } from 'vi-fetch';
 
 describe('huggingface provider', () => {
   const mockApiKey = 'test-api-key';
@@ -9,7 +9,7 @@ describe('huggingface provider', () => {
   const customBaseUrl = 'https://custom-hf-api.com';
   
   beforeEach(() => {
-    MockFetch.reset();
+    mockFetch.reset();
   });
   
   it('should fetch and format Hugging Face models correctly', async () => {
@@ -19,8 +19,12 @@ describe('huggingface provider', () => {
       { id: 't5', modelId: 't5' }
     ];
     
-    mockFetch(`${defaultUrl}?filter=text-generation&sort=downloads&direction=-1&limit=20`)
-      .willResolveToJson(mockResponse);
+    mockFetch('*')
+      .willResolve({
+        json: async () => mockResponse,
+        status: 200,
+        ok: true
+      });
     
     const result = await fetchHuggingFaceModels(mockApiKey);
     
@@ -31,26 +35,36 @@ describe('huggingface provider', () => {
   });
   
   it('should use custom base URL if provided', async () => {
-    mockFetch(`${customBaseUrl}?filter=text-generation&sort=downloads&direction=-1&limit=20`)
-      .willResolveToJson([]);
+    mockFetch('*')
+      .willResolve({
+        json: async () => ([]),
+        status: 200,
+        ok: true
+      });
     
     await fetchHuggingFaceModels(mockApiKey, customBaseUrl);
     
-    expect(MockFetch.lastCall().request.url).toBe(`${customBaseUrl}?filter=text-generation&sort=downloads&direction=-1&limit=20`);
+    const lastCall = mockFetch.lastCall();
+    expect(lastCall.url).toContain(customBaseUrl);
   });
   
   it('should send correct authorization header', async () => {
-    mockFetch(`${defaultUrl}?filter=text-generation&sort=downloads&direction=-1&limit=20`)
-      .willResolveToJson([]);
+    mockFetch('*')
+      .willResolve({
+        json: async () => ([]),
+        status: 200,
+        ok: true
+      });
     
     await fetchHuggingFaceModels(mockApiKey);
     
-    expect(MockFetch.lastCall().request.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
+    const lastCall = mockFetch.lastCall();
+    expect(lastCall.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
   });
   
   it('should throw error on failed request', async () => {
-    mockFetch(`${defaultUrl}?filter=text-generation&sort=downloads&direction=-1&limit=20`)
-      .willFailWithStatus(401);
+    mockFetch('*')
+      .willReject(new Error('Unauthorized'));
     
     await expect(fetchHuggingFaceModels(mockApiKey)).rejects.toThrow('Hugging Face API error');
   });

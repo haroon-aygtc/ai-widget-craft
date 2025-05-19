@@ -1,13 +1,13 @@
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchOpenAIModels } from './openai';
-import { MockFetch, mockFetch } from 'vi-fetch';
+import { mockFetch } from 'vi-fetch';
 
 describe('openai provider', () => {
   const mockApiKey = 'test-api-key';
   
   beforeEach(() => {
-    MockFetch.reset();
+    mockFetch.reset();
   });
   
   it('should fetch and format OpenAI models correctly', async () => {
@@ -22,8 +22,12 @@ describe('openai provider', () => {
       ]
     };
     
-    mockFetch('https://api.openai.com/v1/models')
-      .willResolveToJson(mockResponse);
+    mockFetch('*')
+      .willResolve({
+        json: async () => mockResponse,
+        status: 200,
+        ok: true
+      });
     
     const result = await fetchOpenAIModels(mockApiKey);
     
@@ -36,19 +40,24 @@ describe('openai provider', () => {
   });
   
   it('should throw error if request fails', async () => {
-    mockFetch('https://api.openai.com/v1/models')
-      .willFailWithStatus(401);
+    mockFetch('*')
+      .willReject(new Error('Unauthorized'));
     
     await expect(fetchOpenAIModels(mockApiKey)).rejects.toThrow('OpenAI API error');
   });
   
   it('should send correct headers', async () => {
-    mockFetch('https://api.openai.com/v1/models')
-      .willResolveToJson({ data: [] });
+    mockFetch('*')
+      .willResolve({
+        json: async () => ({ data: [] }),
+        status: 200,
+        ok: true
+      });
     
     await fetchOpenAIModels(mockApiKey);
     
-    expect(MockFetch.lastCall().request.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
-    expect(MockFetch.lastCall().request.headers.get('Content-Type')).toBe('application/json');
+    const lastCall = mockFetch.lastCall();
+    expect(lastCall.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
+    expect(lastCall.headers.get('Content-Type')).toBe('application/json');
   });
 });

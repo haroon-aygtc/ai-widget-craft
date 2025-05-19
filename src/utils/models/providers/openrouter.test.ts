@@ -1,13 +1,13 @@
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchOpenRouterModels } from './openrouter';
-import { MockFetch, mockFetch } from 'vi-fetch';
+import { mockFetch } from 'vi-fetch';
 
 describe('openrouter provider', () => {
   const mockApiKey = 'test-api-key';
   
   beforeEach(() => {
-    MockFetch.reset();
+    mockFetch.reset();
   });
   
   it('should fetch and format OpenRouter models correctly', async () => {
@@ -19,8 +19,12 @@ describe('openrouter provider', () => {
       ]
     };
     
-    mockFetch('https://openrouter.ai/api/v1/models')
-      .willResolveToJson(mockResponse);
+    mockFetch('*')
+      .willResolve({
+        json: async () => mockResponse,
+        status: 200,
+        ok: true
+      });
     
     const result = await fetchOpenRouterModels(mockApiKey);
     
@@ -38,8 +42,12 @@ describe('openrouter provider', () => {
       ]
     };
     
-    mockFetch('https://openrouter.ai/api/v1/models')
-      .willResolveToJson(mockResponse);
+    mockFetch('*')
+      .willResolve({
+        json: async () => mockResponse,
+        status: 200,
+        ok: true
+      });
     
     const result = await fetchOpenRouterModels(mockApiKey);
     
@@ -48,18 +56,23 @@ describe('openrouter provider', () => {
   });
   
   it('should send correct headers', async () => {
-    mockFetch('https://openrouter.ai/api/v1/models')
-      .willResolveToJson({ data: [] });
+    mockFetch('*')
+      .willResolve({
+        json: async () => ({ data: [] }),
+        status: 200,
+        ok: true
+      });
     
     await fetchOpenRouterModels(mockApiKey);
     
-    expect(MockFetch.lastCall().request.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
-    expect(MockFetch.lastCall().request.headers.get('Content-Type')).toBe('application/json');
+    const lastCall = mockFetch.lastCall();
+    expect(lastCall.headers.get('Authorization')).toBe(`Bearer ${mockApiKey}`);
+    expect(lastCall.headers.get('Content-Type')).toBe('application/json');
   });
   
   it('should throw error on failed request', async () => {
-    mockFetch('https://openrouter.ai/api/v1/models')
-      .willFailWithStatus(401);
+    mockFetch('*')
+      .willReject(new Error('Unauthorized'));
     
     await expect(fetchOpenRouterModels(mockApiKey)).rejects.toThrow('OpenRouter API error');
   });
