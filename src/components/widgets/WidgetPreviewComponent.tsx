@@ -86,7 +86,7 @@ const WidgetPreviewComponent = ({ config }: { config: Partial<WidgetConfig> }) =
     setFullScreen(!fullScreen);
   };
 
-  // Ensure the preview container has proper height constraints
+  // Ensure the preview container has proper height and positioning
   return (
     <div className="relative h-[500px] border rounded-md bg-gray-50 overflow-hidden">
       {/* Simulated webpage content */}
@@ -109,11 +109,17 @@ const WidgetPreviewComponent = ({ config }: { config: Partial<WidgetConfig> }) =
         </button>
       )}
 
-      {/* Chat widget window */}
+      {/* Chat widget window - Updated to ensure it's always visible within the container */}
       {isOpen && (
         <Card 
-          className={`absolute ${fullScreen ? 'inset-4' : 'bottom-4 right-4 w-[300px] h-[400px]'} z-20 flex flex-col shadow-lg overflow-hidden transition-all duration-300`}
-          style={{ maxHeight: fullScreen ? 'calc(100% - 2rem)' : '400px' }}
+          className={`absolute z-20 flex flex-col shadow-lg overflow-hidden transition-all duration-300`}
+          style={{ 
+            width: fullScreen ? 'calc(100% - 2rem)' : '300px',
+            height: fullScreen ? 'calc(100% - 2rem)' : '400px',
+            right: '1rem',
+            bottom: '1rem',
+            maxHeight: fullScreen ? 'calc(100% - 2rem)' : '400px'
+          }}
         >
           <div 
             className="flex items-center justify-between p-3"
