@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MessageSquare, Bot, User, Copy } from "lucide-react";
@@ -155,6 +155,7 @@ const WidgetPreview = () => {
                           ? "bg-primary text-primary-foreground"
                           : "bg-secondary"
                       }`}
+                      style={msg.sender === "user" ? { backgroundColor: widgetData.primaryColor } : {}}
                     >
                       <div className="flex items-start gap-2">
                         {msg.sender === "bot" && (
@@ -194,7 +195,7 @@ const WidgetPreview = () => {
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid grid-cols-3 w-full">
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                  <TabsTrigger value="preview">Script</TabsTrigger>
                   <TabsTrigger value="iframe">iFrame</TabsTrigger>
                   <TabsTrigger value="react">React</TabsTrigger>
                 </TabsList>

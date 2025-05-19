@@ -13,8 +13,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, MessageSquare, Brush, Settings, MessageCircle, Bot, Code } from "lucide-react";
+import { ArrowLeft, MessageSquare, Brush, Settings, MessageCircle, Bot, Code, Copy, Monitor, Smartphone, Tablet } from "lucide-react";
 import WidgetPreviewComponent from "@/components/widgets/WidgetPreviewComponent";
+import type { WidgetConfig } from "@/components/widgets/WidgetPreviewComponent";
 
 // Form schema
 const formSchema = z.object({
@@ -27,6 +28,9 @@ const formSchema = z.object({
   buttonText: z.string().default("Chat with us"),
   buttonPosition: z.enum(["bottom-right", "bottom-left", "bottom-center"]).default("bottom-right"),
   bubbleIcon: z.enum(["message", "question", "bot"]).default("message"),
+  botName: z.string().default("Support Assistant"),
+  inputPlaceholder: z.string().default("Type your message here..."),
+  headerTitle: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -35,6 +39,7 @@ const WidgetCreate = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("basic");
+  const [previewDevice, setPreviewDevice] = useState("desktop");
   
   // Mock AI models
   const aiModels = [
@@ -43,6 +48,8 @@ const WidgetCreate = () => {
     { id: "3", name: "Claude Instant" },
     { id: "4", name: "Mistral-7B" },
     { id: "5", name: "OpenRouter" },
+    { id: "6", name: "Hugging Face" },
+    { id: "7", name: "DeepSeek" },
   ];
   
   const defaultValues: FormValues = {
@@ -55,6 +62,9 @@ const WidgetCreate = () => {
     buttonText: "Chat with us",
     buttonPosition: "bottom-right",
     bubbleIcon: "message",
+    botName: "Support Assistant",
+    inputPlaceholder: "Type your message here...",
+    headerTitle: "",
   };
   
   const form = useForm<FormValues>({
@@ -72,6 +82,22 @@ const WidgetCreate = () => {
       description: `${data.name} has been created successfully.`,
     });
     navigate("/widgets");
+  };
+
+  // Create a complete widget config for the preview component
+  const widgetConfig: WidgetConfig = {
+    name: formValues.name || "Chat Widget",
+    description: formValues.description,
+    welcomeMessage: formValues.welcomeMessage,
+    primaryColor: formValues.primaryColor,
+    buttonText: formValues.buttonText,
+    buttonPosition: formValues.buttonPosition,
+    bubbleIcon: formValues.bubbleIcon,
+    active: formValues.active,
+    modelId: formValues.modelId,
+    botName: formValues.botName,
+    inputPlaceholder: formValues.inputPlaceholder,
+    headerTitle: formValues.headerTitle,
   };
   
   return (
@@ -92,18 +118,26 @@ const WidgetCreate = () => {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3 mb-6">
+                <TabsList className="grid grid-cols-5 mb-6">
                   <TabsTrigger value="basic">
                     <MessageSquare className="mr-2 h-4 w-4" />
-                    Basic Setup
+                    General
                   </TabsTrigger>
                   <TabsTrigger value="appearance">
                     <Brush className="mr-2 h-4 w-4" />
                     Appearance
                   </TabsTrigger>
+                  <TabsTrigger value="content">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Content
+                  </TabsTrigger>
                   <TabsTrigger value="behavior">
                     <Settings className="mr-2 h-4 w-4" />
                     Behavior
+                  </TabsTrigger>
+                  <TabsTrigger value="advanced">
+                    <Code className="mr-2 h-4 w-4" />
+                    Advanced
                   </TabsTrigger>
                 </TabsList>
                 
@@ -170,27 +204,6 @@ const WidgetCreate = () => {
                             </Select>
                             <FormDescription>
                               Choose which AI model will power this chat widget.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="welcomeMessage"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Welcome Message</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Hello! How can I help you today?" 
-                                className="resize-none" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              The first message users will see when they open the chat.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -327,6 +340,80 @@ const WidgetCreate = () => {
                         )}
                       />
                     </TabsContent>
+
+                    <TabsContent value="content" className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="welcomeMessage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Welcome Message</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Hello! How can I help you today?" 
+                                className="resize-none" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              The first message users will see when they open the chat.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="botName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bot Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Support Assistant" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Name displayed for the bot in the conversation.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="headerTitle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Chat Header Title (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Support Chat" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Title shown in the widget header. If empty, Bot Name will be used.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="inputPlaceholder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Input Placeholder</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Type your message here..." {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Placeholder text shown in the message input field.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TabsContent>
                     
                     <TabsContent value="behavior" className="space-y-6">
                       {/* Additional behavior settings would go here in a real app */}
@@ -358,6 +445,59 @@ const WidgetCreate = () => {
                             <label htmlFor="history" className="text-sm">Enable conversation history</label>
                           </div>
                         </div>
+
+                        <div className="rounded-lg border p-4">
+                          <div className="font-medium">Initial Messages</div>
+                          <div className="text-sm text-muted-foreground mt-1 mb-3">
+                            Show welcome message when widget opens.
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch id="showWelcome" defaultChecked />
+                            <label htmlFor="showWelcome" className="text-sm">Show welcome message</label>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="advanced" className="space-y-6">
+                      <div className="rounded-lg border p-4">
+                        <div className="font-medium">Custom CSS</div>
+                        <div className="text-sm text-muted-foreground mt-1 mb-3">
+                          Add custom CSS to style your chat widget.
+                        </div>
+                        <Textarea 
+                          placeholder="/* Add your custom CSS here */
+.chat-widget {
+  /* Your styles */
+}" 
+                          className="h-32 font-mono text-sm"
+                        />
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <div className="font-medium">Custom Scripts</div>
+                        <div className="text-sm text-muted-foreground mt-1 mb-3">
+                          Add custom JavaScript to extend your chat widget.
+                        </div>
+                        <Textarea 
+                          placeholder="// Add your custom JavaScript here
+document.addEventListener('DOMContentLoaded', function() {
+  // Your code
+});" 
+                          className="h-32 font-mono text-sm"
+                        />
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <div className="font-medium">Domain Restrictions</div>
+                        <div className="text-sm text-muted-foreground mt-1 mb-3">
+                          Limit widget to specific domains (one per line).
+                        </div>
+                        <Textarea 
+                          placeholder="example.com
+subdomain.example.com" 
+                          className="h-24 font-mono text-sm"
+                        />
                       </div>
                     </TabsContent>
                     
@@ -376,12 +516,40 @@ const WidgetCreate = () => {
         
         <div className="md:col-span-1">
           <Card>
-            <CardHeader>
-              <CardTitle>Widget Preview</CardTitle>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle>Widget Preview</CardTitle>
+                <div className="flex border rounded-md">
+                  <Button 
+                    variant={previewDevice === "desktop" ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="px-2"
+                    onClick={() => setPreviewDevice("desktop")}
+                  >
+                    <Monitor className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant={previewDevice === "tablet" ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="px-2"
+                    onClick={() => setPreviewDevice("tablet")}
+                  >
+                    <Tablet className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant={previewDevice === "mobile" ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="px-2"
+                    onClick={() => setPreviewDevice("mobile")}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <CardDescription>See how your widget will appear to users.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
-              <WidgetPreviewComponent config={formValues} />
+            <CardContent className={`pt-2 ${previewDevice === "mobile" ? "max-w-[320px]" : previewDevice === "tablet" ? "max-w-[768px]" : ""} mx-auto`}>
+              <WidgetPreviewComponent config={widgetConfig} />
             </CardContent>
           </Card>
           
