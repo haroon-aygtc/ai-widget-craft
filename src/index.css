@@ -33,7 +33,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83% 53.3%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
@@ -86,6 +86,27 @@
   }
 }
 
+@layer components {
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-xl border border-white/20 dark:bg-black/20 dark:border-white/10 shadow-glass;
+  }
+  
+  .nav-link {
+    @apply relative px-3 py-2 rounded-md transition-colors duration-200
+    hover:bg-primary/10 hover:text-primary
+    focus:outline-none focus:bg-primary/10 focus:text-primary;
+  }
+  
+  .nav-link.active {
+    @apply bg-primary/15 text-primary font-medium;
+  }
+  
+  .nav-link.active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-md;
+  }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -112,4 +133,42 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-in-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 2px;
+  background-color: currentColor;
+  animation: typingAnimation 1.5s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingAnimation {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(-3px); }
 }

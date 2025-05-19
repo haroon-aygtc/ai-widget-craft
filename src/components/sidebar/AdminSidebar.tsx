@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { MessageSquare, Database, LayoutDashboard, Settings } from "lucide-react";
+import { MessageSquare, Database, LayoutDashboard, Settings, Menu } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,10 +11,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarFooter
+  SidebarFooter,
+  SidebarTrigger
 } from "@/components/ui/sidebar";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
-const AdminSidebar = () => {
+export const AdminSidebar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -24,45 +27,56 @@ const AdminSidebar = () => {
     return false;
   };
 
+  const menuItems = [
+    { path: "/", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/widgets", label: "Chat Widgets", icon: MessageSquare },
+    { path: "/models", label: "AI Models", icon: Database },
+  ];
+
   return (
     <Sidebar>
       <SidebarHeader className="py-6 px-4">
         <div className="flex items-center space-x-3">
-          <div className="bg-primary/10 p-2 rounded-md">
+          <div className="rounded-md bg-primary/10 p-2">
             <MessageSquare className="h-6 w-6 text-primary" />
           </div>
-          <span className="text-xl font-bold">ChatWidget</span>
+          <motion.span 
+            initial={{ opacity: 0, x: -5 }} 
+            animate={{ opacity: 1, x: 0 }} 
+            transition={{ delay: 0.1 }} 
+            className="text-xl font-bold"
+          >
+            ChatWidget
+          </motion.span>
         </div>
+        <SidebarTrigger className="absolute top-3 right-3 lg:hidden">
+          <Menu size={20} />
+        </SidebarTrigger>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={isActive("/") && !isActive("/widgets") && !isActive("/models") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}>
-                  <Link to="/">
-                    <LayoutDashboard className="h-5 w-5" />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={isActive("/widgets") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}>
-                  <Link to="/widgets">
-                    <MessageSquare className="h-5 w-5" />
-                    <span>Chat Widgets</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={isActive("/models") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}>
-                  <Link to="/models">
-                    <Database className="h-5 w-5" />
-                    <span>AI Models</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {menuItems.map((item, index) => (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton asChild className={cn(
+                    isActive(item.path) ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                  )}>
+                    <motion.div
+                      initial={{ x: -10, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="w-full"
+                    >
+                      <Link to={item.path} className="flex items-center w-full">
+                        <item.icon className="h-5 w-5 mr-3" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </motion.div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -72,7 +86,7 @@ const AdminSidebar = () => {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/settings">
-                <Settings className="h-5 w-5" />
+                <Settings className="h-5 w-5 mr-3" />
                 <span>Settings</span>
               </Link>
             </SidebarMenuButton>
@@ -82,5 +96,3 @@ const AdminSidebar = () => {
     </Sidebar>
   );
 };
-
-export default AdminSidebar;

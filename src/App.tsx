@@ -15,15 +15,16 @@ import AIModelEdit from "./pages/models/AIModelEdit";
 import WidgetPreview from "./pages/widgets/WidgetPreview";
 import AdminLayout from "./components/layouts/AdminLayout";
 import NotFound from "./pages/NotFound";
+import { ThemeProvider } from "./components/theme/theme-provider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <SidebarProvider>
+    <ThemeProvider defaultTheme="system" storageKey="ai-widget-theme">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<AdminLayout />}>
@@ -43,8 +44,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </SidebarProvider>
-    </TooltipProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
